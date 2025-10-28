@@ -14,7 +14,7 @@ export type ToolCallResult<Params extends ToolInputType> =
 export type ToolCallAccepted<Params extends ToolInputType> = {
   ok: true;
   value: Params;
-  // We include free form feedback for the whole tool call.
+  // We include freeform feedback for the whole tool call.
 } & FreeFormFeedback;
 
 export type FreeFormFeedback = {
@@ -51,10 +51,10 @@ export type ParameterFeedbackCommon<T, SchemaType extends T = T> = {
   // The tooling may normalize values to a canonical form
   normalizedValue?: T;
   // The tooling may dynamically validate the parameter based on the context
-  // This is useful for parameters the shape of which is not statically known at design time
+  // This is useful for parameters whose shape is not statically known at design time
   dynamicParameterSchema?: z.ZodType<SchemaType>;
 } & AcceptableValues<T> &
-  // We include free form feedback for the parameter specifically.
+  // We include freeform feedback for the parameter specifically.
   FreeFormFeedback;
 
 export type AcceptableValues<T> = AtMostOne<{
@@ -78,7 +78,7 @@ export type ParameterFeedbackRefusal<Params extends ToolInputType> = AtLeastOne<
     // Freeform reasons for why the parameter was not considered valid.
     refusalReasons?: NonEmptyArray<string>;
     // Sometimes it is not possible to validate a parameter without knowing the values of other parameters.
-    // In this case, the developer may specify the parameters that are required to validate the parameter.
+    // In this case, the developer may specify the parameters that are required to validate this parameter.
     requiresValidParameters?: NonEmptyArray<keyof Params>;
   },
   'refusalReasons' | 'requiresValidParameters'
