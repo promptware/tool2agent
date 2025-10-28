@@ -8,7 +8,7 @@ Real-world domain constraints are complex, dynamic, and non-publicly-known - in 
 
 Technically speaking, tool2agent is a collection of schemas that allow structuring tool call feedback flows in a predictable manner.
 
-![LLM](./img/slide-1.png)
+![LLM](https://raw.githubusercontent.com/promptware/tool2agent/master/img/slide-1.png)
 
 ## Problems and solutions
 

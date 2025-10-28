@@ -1,4 +1,4 @@
-import z from 'zod';
+import { type ZodType } from 'zod';
 import { AtLeastOne, AtMostOne, NonEmptyArray } from './types.js';
 
 // We enforce that the tool input type is a record of values.
@@ -52,7 +52,7 @@ export type ParameterFeedbackCommon<T, SchemaType extends T = T> = {
   normalizedValue?: T;
   // The tooling may dynamically validate the parameter based on the context
   // This is useful for parameters whose shape is not statically known at design time
-  dynamicParameterSchema?: z.ZodType<SchemaType>;
+  dynamicParameterSchema?: ZodType<SchemaType>;
 } & AcceptableValues<T> &
   // We include freeform feedback for the parameter specifically.
   FreeFormFeedback;

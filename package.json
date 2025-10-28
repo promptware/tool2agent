@@ -3,16 +3,34 @@
   "version": "1.0.0",
   "description": "Type definitions for tool2agent: a protocol for structured LLM tool feedback",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist-cjs/index.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist-cjs/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "dist-cjs",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && tsc -p tsconfig.cjs.json",
     "build:watch": "tsc --watch",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist dist-cjs",
     "test": "pnpm run test:types",
     "test:types": "tsc --project test-d/tsconfig.json",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "prepack": "pnpm run build"
   },
   "keywords": [
     "tool2agent",
@@ -20,13 +38,23 @@
     "ai"
   ],
   "author": "klntsky",
-  "license": "ISC",
+  "license": "Unlicense",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/promptware/tool2agent.git"
+  },
+  "homepage": "https://github.com/promptware/tool2agent#readme",
+  "bugs": {
+    "url": "https://github.com/promptware/tool2agent/issues"
+  },
+  "readme": "README.md",
   "devDependencies": {
     "@types/node": "^22.15.29",
     "prettier": "^3.6.2",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "zod": "^4.0.0"
   },
-  "dependencies": {
-    "zod": "^3.25.76"
+  "peerDependencies": {
+    "zod": "^3 || ^4"
   }
 }
