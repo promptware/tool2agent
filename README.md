@@ -50,6 +50,8 @@ The specification is expressed as TypeScript types and is available [here](./src
 pnpm i tool2agent
 ```
 
+Additionally, this package provides [machinery](./src/schemas.ts) for producing Zod schemas for tool2agent types, that are supposed to be parameterized by user-provided types. These schemas should _never_ be fed to a LLM, because they explode exponentially in size with the number of parameters due to the way we enforce correctness in generated Zod schemas.
+
 ## How do I use it?
 
 The specification itself only makes sense for those who develop tool2agent-enabled machinery, not for agent developers.
