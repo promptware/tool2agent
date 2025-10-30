@@ -54,4 +54,6 @@ pnpm i tool2agent
 
 The specification itself only makes sense for those who develop tool2agent-enabled machinery, not for agent developers.
 
-Agent developers should use tool2agent-based libraries.
+Agent developers should use tool2agent-based libraries:
+
+- [`@tool2agent/ai-sdk`](https://github.com/promptware/tool2agent-ai-sdk) [(NPM)](https://npmjs.com/package/@tool2agent/ai-sdk) - tool2agent bindings for AI SDK
