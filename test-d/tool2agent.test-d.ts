@@ -1,5 +1,4 @@
 import {
-  type ToolCallResult,
   type ToolCallAccepted,
   type ToolCallRejected,
   type ParameterFeedback,
@@ -236,4 +235,23 @@ const paramFeedbackWrongSchema: ParameterFeedbackCommon<JustType> = {
   dynamicParameterSchema: z.object({
     someOtherField: z.enum(['a', 'b']),
   }),
+};
+
+// ==================== ParameterFeedbackCommon dynamicParameterSchema Variance ====================
+
+const animalSchema = z.object({ species: z.string() });
+const dogSchema = z.object({ species: z.literal('dog'), barks: z.literal(true) });
+
+type Animal = z.infer<typeof animalSchema>;
+type Dog = z.infer<typeof dogSchema>;
+
+// Valid: subtype schema is assignable to ParameterFeedbackCommon of the supertype
+const validPfAnimal: ParameterFeedbackCommon<Animal> = {
+  dynamicParameterSchema: dogSchema,
+};
+
+// Invalid: supertype schema is not assignable to ParameterFeedbackCommon of the subtype
+const invalidPfDog: ParameterFeedbackCommon<Dog> = {
+  // @ts-expect-error - supertype schema should not be assignable to subtype feedback
+  dynamicParameterSchema: animalSchema,
 };
