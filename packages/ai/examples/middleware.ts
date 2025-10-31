@@ -9,10 +9,13 @@ import 'dotenv/config';
 const inputSchema = z.object({ query: z.string() });
 const outputSchema = z.object({ results: z.array(z.string()) });
 
+type InputSchema = typeof inputSchema;
+type OutputSchema = typeof outputSchema;
+
 type SearchToolInput = z.infer<typeof inputSchema>;
 type SearchToolOutput = z.infer<typeof outputSchema>;
 
-const toolParameters: Tool2AgentOptions<SearchToolInput, SearchToolOutput> = {
+const toolParameters: Tool2AgentOptions<InputSchema, OutputSchema> = {
   inputSchema,
   outputSchema,
   execute: async (params: Partial<SearchToolInput>) => {
@@ -30,8 +33,8 @@ const toolParameters: Tool2AgentOptions<SearchToolInput, SearchToolOutput> = {
 
 // Forbids "evil" queries from being processed by the tool
 const evilFilterMiddleware = (
-  params: Tool2AgentOptions<SearchToolInput, SearchToolOutput>,
-): Tool2AgentOptions<SearchToolInput, SearchToolOutput> => {
+  params: Tool2AgentOptions<InputSchema, OutputSchema>,
+): Tool2AgentOptions<InputSchema, OutputSchema> => {
   return {
     ...params,
     execute: async (input: Partial<SearchToolInput>, options?: ToolCallOptions) => {
@@ -64,8 +67,8 @@ const evilFilterMiddleware = (
 const secrets = ['secret1', 'password1'];
 
 const secretsFilterMiddleware = (
-  params: Tool2AgentOptions<SearchToolInput, SearchToolOutput>,
-): Tool2AgentOptions<SearchToolInput, SearchToolOutput> => {
+  params: Tool2AgentOptions<InputSchema, OutputSchema>,
+): Tool2AgentOptions<InputSchema, OutputSchema> => {
   return {
     ...params,
     execute: async (input: Partial<SearchToolInput>, options?: ToolCallOptions) => {
@@ -87,7 +90,7 @@ const secretsFilterMiddleware = (
   };
 };
 
-const tool = tool2agent<SearchToolInput, SearchToolOutput>({
+const tool = tool2agent({
   description: 'Query something somewhere',
   ...evilFilterMiddleware(secretsFilterMiddleware(toolParameters)),
 });

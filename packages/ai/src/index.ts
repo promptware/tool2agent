@@ -3,24 +3,23 @@ import {
   ToolCallOptions,
   ToolExecuteFunction,
   tool,
-  type FlexibleSchema,
   dynamicTool,
 } from '@ai-sdk/provider-utils';
 import { z } from 'zod';
 import type { ToolCallResult, ToolInputType } from '@tool2agent/types';
 
 export type Tool2AgentOptions<
-  InputType extends ToolInputType,
-  OutputType extends unknown,
-  InputSchema extends z.ZodType<InputType> = z.ZodType<InputType>,
-  OutputSchema extends z.ZodType<OutputType> = z.ZodType<OutputType>,
+  InputSchema extends z.ZodObject<any>,
+  OutputSchema extends z.ZodType<any> = z.ZodNever,
 > = {
   inputSchema: InputSchema;
   outputSchema: OutputSchema;
   execute: (
-    params: Partial<InputType>,
+    params: Partial<z.infer<InputSchema>>,
     options?: ToolCallOptions,
-  ) => Promise<ToolCallResult<InputType, OutputType>> | ToolCallResult<InputType, OutputType>;
+  ) =>
+    | Promise<ToolCallResult<z.infer<InputSchema> & ToolInputType, z.infer<OutputSchema>>>
+    | ToolCallResult<z.infer<InputSchema> & ToolInputType, z.infer<OutputSchema>>;
 };
 
 export type Tool2Agent<InputType extends ToolInputType, OutputType> = Tool<
@@ -29,58 +28,59 @@ export type Tool2Agent<InputType extends ToolInputType, OutputType> = Tool<
 >;
 
 export function tool2agent<
-  InputType extends ToolInputType,
-  OutputType extends unknown,
-  InputSchema extends z.ZodType<InputType> = z.ZodType<InputType>,
-  OutputSchema extends z.ZodType<OutputType> = z.ZodType<OutputType>,
+  InputSchema extends z.ZodObject<any>,
+  OutputSchema extends z.ZodType<any> = z.ZodNever,
 >(
   params: Omit<
-    Tool<InputType, OutputType>,
+    Tool<z.infer<InputSchema> & ToolInputType, z.infer<OutputSchema>>,
     'execute' | 'inputSchema' | 'outputSchema' | 'toModelOutput'
   > &
-    Tool2AgentOptions<InputType, OutputType, InputSchema, OutputSchema>,
-): Tool2Agent<InputType, OutputType> {
+    Tool2AgentOptions<InputSchema, OutputSchema>,
+): Tool2Agent<z.infer<InputSchema> & ToolInputType, z.infer<OutputSchema>> {
   const { execute, inputSchema, outputSchema, type, ...rest } = params;
+  type InputType = z.infer<InputSchema> & ToolInputType;
+  type OutputType = z.infer<OutputSchema>;
   type PartialInputType = Partial<InputType>;
-  type PartialInputSchema = FlexibleSchema<PartialInputType>;
-  // .partial() call is safe because InputSchema is z.ZodObject. This is guaranteed because InputType
-  // extends an object, and InputSchema is tied to InputType.
-  const partialInputSchema: PartialInputSchema = (inputSchema as any).partial();
+  type PartialInputSchema = z.ZodType<PartialInputType>;
+  // .partial() call is safe because InputSchema extends z.ZodObject<any>
+  // We cast to satisfy TypeScript's type checker, but this is safe at runtime.
+  const partialInputSchema = inputSchema.partial() as any as PartialInputSchema;
 
   const executeFunction = async (
     input: PartialInputType,
     options: ToolCallOptions,
   ): Promise<ToolCallResult<InputType, OutputType>> => {
     // format exception into tool2agent rejection reason
-    const handleError = (stage: string, error: unknown) => {
+    const handleError = (error: unknown) => {
+      const errorMessage = `Exception occured during tool call execution: `;
       if (error instanceof Error) {
         if (error.message && error.name) {
           return {
             ok: false,
-            rejectionReasons: [
-              `Exception occured during ${stage}: ` + error.name + ': ' + error.message,
-            ],
+            rejectionReasons: [errorMessage + error.name + ': ' + error.message],
           };
         }
         return {
           ok: false,
-          rejectionReasons: [`Exception occured during ${stage}: ` + error.stack],
+          rejectionReasons: [errorMessage + error.stack],
         };
       }
       return {
         ok: false,
-        rejectionReasons: [`Exception occured during ${stage}: ` + String(error)],
+        rejectionReasons: [errorMessage + String(error)],
       };
     };
 
     // execute the tool with the validated payload
     try {
-      return await params.execute(input, options);
+      return (await params.execute(input, options)) as ToolCallResult<InputType, OutputType>;
     } catch (error: unknown) {
-      return handleError('tool call execution', error) as ToolCallResult<InputType, OutputType>;
+      return handleError(error) as ToolCallResult<InputType, OutputType>;
     }
   };
 
+  // We have to branch on the presence of type: 'function' to let the typechecker
+  // catch up with us
   if (type === 'function') {
     const theTool: Tool<PartialInputType, ToolCallResult<InputType, OutputType>> = {
       ...rest,
@@ -100,7 +100,7 @@ export function tool2agent<
       onInputAvailable: undefined,
     };
     // tool() is an identity function but we call it anyway for the love of the game
-    return tool(theTool);
+    return tool(theTool) as Tool2Agent<InputType & ToolInputType, OutputType>;
   } else {
     const definition = dynamicTool({
       ...rest,
@@ -112,6 +112,6 @@ export function tool2agent<
     });
     // hack: patch type: dynamic back to the original type
     definition.type = type as any;
-    return definition as unknown as Tool2Agent<InputType, OutputType>;
+    return definition as unknown as Tool2Agent<InputType & ToolInputType, OutputType>;
   }
 }

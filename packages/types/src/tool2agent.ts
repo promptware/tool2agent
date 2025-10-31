@@ -10,7 +10,7 @@ export type ToolInputType = Record<string, unknown>;
 
 /** The outermost type that characterizes the outcome of a tool call.
  */
-export type ToolCallResult<InputType extends ToolInputType, OutputType = never> =
+export type ToolCallResult<InputType extends ToolInputType, OutputType> =
   | ToolCallAccepted<OutputType>
   | ToolCallRejected<InputType>;
 
@@ -19,8 +19,10 @@ export type ToolCallResult<InputType extends ToolInputType, OutputType = never> 
  */
 export type ToolCallAccepted<OutputType> = {
   ok: true;
-} & (OutputType extends never
-  ? {}
+} & ([OutputType] extends [never]
+  ? {
+      value?: never; // Explicitly disallow value property
+    }
   : {
       value: OutputType;
     }) &

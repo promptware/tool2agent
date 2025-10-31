@@ -255,3 +255,12 @@ const invalidPfDog: ParameterFeedbackCommon<Dog> = {
   // @ts-expect-error - supertype schema should not be assignable to subtype feedback
   dynamicParameterSchema: animalSchema,
 };
+
+// ==================== Empty output schema ====================
+
+const emptyOutputSchema = z.never();
+type EmptyOutputType = z.infer<typeof emptyOutputSchema>;
+
+const validAcceptedEmpty: ToolCallAccepted<never> = {
+  ok: true,
+};

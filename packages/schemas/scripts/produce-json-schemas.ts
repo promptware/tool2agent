@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { mkTool2AgentSchema } from '@tool2agent/schemas';
+import { mkTool2AgentSchema } from '../src/index.js';
 
 // Note: This script uses Zod v4's native z.toJSONSchema() method
 // which provides built-in JSON Schema conversion without external dependencies

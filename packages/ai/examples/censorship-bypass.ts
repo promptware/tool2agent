@@ -55,12 +55,7 @@ function searchDataset(query: string, dataset: string[]): string[] {
 }
 
 // tool2agent tool definition for search.
-const searchTool: Tool2Agent<SearchToolInput, SearchToolOutput> = tool2agent<
-  SearchToolInput,
-  SearchToolOutput,
-  typeof inputSchema,
-  typeof outputSchema
->({
+const searchTool = tool2agent({
   description: 'Exact-match search over a dataset',
   inputSchema,
   outputSchema,

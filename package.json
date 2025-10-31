@@ -5,11 +5,11 @@
   "description": "tool2agent monorepo",
   "type": "module",
   "scripts": {
-    "build": "pnpm --filter @tool2agent/types build && pnpm --filter @tool2agent/ai build && pnpm --filter @tool2agent/schemas build",
-    "test": "pnpm --filter @tool2agent/types test && pnpm --filter @tool2agent/schemas test",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "clean": "pnpm --filter @tool2agent/types clean && pnpm --filter @tool2agent/ai clean && pnpm --filter @tool2agent/schemas clean"
+    "clean": "pnpm -r clean"
   },
   "devDependencies": {
     "prettier": "^3.6.2"

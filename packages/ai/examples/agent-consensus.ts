@@ -254,26 +254,23 @@ function createAgentTools(
   knowledgeBase: KnowledgeBase,
 ) {
   // Wrapper to log tool inputs and outputs
-  const wrapExecute = <TInput extends ToolInputType, TOutput>(
-    toolName: string,
-    execute: (
-      params: Partial<TInput>,
-      options?: any,
-    ) => Promise<ToolCallResult<TInput, TOutput>> | ToolCallResult<TInput, TOutput>,
-  ): ((
-    params: Partial<TInput>,
-    options?: any,
-  ) => Promise<ToolCallResult<TInput, TOutput>> | ToolCallResult<TInput, TOutput>) => {
-    return async (params: Partial<TInput>, options?: any) => {
-      console.log(`🔧 ${toolName}[${agentName}] INPUT:`, JSON.stringify(params));
+  function wrapExecute<TFn extends (...args: any[]) => any>(toolName: string, execute: TFn): TFn {
+    return ((...args: any[]) => {
+      console.log(`🔧 ${toolName}[${agentName}] INPUT:`, JSON.stringify(args[0]));
 
-      const result = await execute(params, options);
+      const result = execute(...args);
 
-      console.log(`🔧 ${toolName}[${agentName}] OUTPUT:`, JSON.stringify(result));
+      if (result instanceof Promise) {
+        result.then(value => {
+          console.log(`🔧 ${toolName}[${agentName}] OUTPUT:`, JSON.stringify(value));
+        });
+      } else {
+        console.log(`🔧 ${toolName}[${agentName}] OUTPUT:`, JSON.stringify(result));
+      }
 
       return result;
-    };
-  };
+    }) as TFn;
+  }
   const mailOutputSchema = z.object({
     messages: z.array(
       z.object({
@@ -307,11 +304,19 @@ function createAgentTools(
 
   const giveUpSchema = z.object({});
 
+  // Types derived from schemas
+  type MailOutput = z.infer<typeof mailOutputSchema>;
+  type Propose = z.infer<typeof proposeSchema>;
+  type UpdateKnowledge = z.infer<typeof updateKnowledgeSchema>;
+  type Confirm = z.infer<typeof confirmSchema>;
+  type Reject = z.infer<typeof rejectSchema>;
+  type GiveUp = z.infer<typeof giveUpSchema>;
+
   // Helper function to validate place and time parameters
-  function validatePlaceAndTime<TOutput>(
+  function validatePlaceAndTime(
     place: Place | undefined,
     time: Time | undefined,
-  ): ToolCallResult<{ place: Place; time: Time }, TOutput> | null {
+  ): ToolCallResult<{ place: Place; time: Time }, any> | null {
     if (!place || !time) {
       return {
         ok: false,
@@ -320,17 +325,17 @@ function createAgentTools(
           place: place ? { valid: true } : { valid: false, refusalReasons: ['Place is required'] },
           time: time ? { valid: true } : { valid: false, refusalReasons: ['Time is required'] },
         },
-      } as ToolCallResult<{ place: Place; time: Time }, TOutput>;
+      } as ToolCallResult<{ place: Place; time: Time }, any>;
     }
     return null;
   }
 
   // Helper function to check if agent can attend based on knowledge base
-  function checkSelfCanAttend<TOutput>(
+  function checkSelfCanAttend(
     place: Place,
     time: Time,
     errorMessage: string,
-  ): ToolCallResult<{ place: Place; time: Time }, TOutput> | null {
+  ): ToolCallResult<{ place: Place; time: Time }, any> | null {
     const selfMap = knowledgeBase.get(agentName);
     if (selfMap) {
       const timeMap = selfMap.get(place);
@@ -340,7 +345,7 @@ function createAgentTools(
           return {
             ok: false,
             rejectionReasons: [errorMessage],
-          } as ToolCallResult<{ place: Place; time: Time }, TOutput>;
+          } as ToolCallResult<{ place: Place; time: Time }, any>;
         }
       }
     }
@@ -436,12 +441,10 @@ function createAgentTools(
   const updateKnowledgeTool = tool2agent({
     description: `Update your knowledge base about what an agent can or cannot do for a specific place and time. Use this when you learn (from messages or confirmations) that an agent can or cannot attend a particular place/time combination.`,
     inputSchema: updateKnowledgeSchema,
-    outputSchema: z.object({}),
+    outputSchema: z.never(),
     execute: wrapExecute(
       'update_knowledge',
-      async (
-        params: Partial<z.infer<typeof updateKnowledgeSchema>>,
-      ): Promise<ToolCallResult<z.infer<typeof updateKnowledgeSchema>, {}>> => {
+      async (params: Partial<UpdateKnowledge>): Promise<ToolCallResult<UpdateKnowledge, never>> => {
         const agent = params.agent;
         const place = params.place;
         const time = params.time;
@@ -450,7 +453,6 @@ function createAgentTools(
         if (!agent || !place || !time || !status) {
           return {
             ok: false,
-            rejectionReasons: ['All parameters (agent, place, time, status) are required'],
             validationResults: {
               agent: agent
                 ? { valid: true }
@@ -484,7 +486,6 @@ function createAgentTools(
 
         return {
           ok: true,
-          value: {},
         };
       },
     ),
@@ -496,21 +497,17 @@ function createAgentTools(
     outputSchema: mailOutputSchema,
     execute: wrapExecute(
       'propose',
-      async (
-        params: Partial<z.infer<typeof proposeSchema>>,
-      ): Promise<
-        ToolCallResult<z.infer<typeof proposeSchema>, z.infer<typeof mailOutputSchema>>
-      > => {
+      async (params: Partial<Propose>): Promise<ToolCallResult<Propose, MailOutput>> => {
         const place = params.place;
         const time = params.time;
 
-        const validationError = validatePlaceAndTime<z.infer<typeof mailOutputSchema>>(place, time);
+        const validationError = validatePlaceAndTime(place, time);
         if (validationError) {
           return validationError;
         }
 
         // Check knowledge base for this agent (like confirm does)
-        const selfError = checkSelfCanAttend<z.infer<typeof mailOutputSchema>>(
+        const selfError = checkSelfCanAttend(
           place!,
           time!,
           `You cannot propose ${place} at ${time} based on your constraints.`,
@@ -557,19 +554,17 @@ function createAgentTools(
     outputSchema: z.object({}),
     execute: wrapExecute(
       'confirm',
-      async (
-        params: Partial<z.infer<typeof confirmSchema>>,
-      ): Promise<ToolCallResult<z.infer<typeof confirmSchema>, {}>> => {
+      async (params: Partial<Confirm>): Promise<ToolCallResult<Confirm, {}>> => {
         const place = params.place;
         const time = params.time;
 
-        const validationError = validatePlaceAndTime<{}>(place, time);
+        const validationError = validatePlaceAndTime(place, time);
         if (validationError) {
           return validationError;
         }
 
         // Check knowledge base for this agent
-        const selfError = checkSelfCanAttend<{}>(
+        const selfError = checkSelfCanAttend(
           place!,
           time!,
           `You cannot confirm ${place} at ${time} based on your constraints.`,
@@ -616,13 +611,11 @@ function createAgentTools(
     outputSchema: z.object({}),
     execute: wrapExecute(
       'reject',
-      async (
-        params: Partial<z.infer<typeof rejectSchema>>,
-      ): Promise<ToolCallResult<z.infer<typeof rejectSchema>, {}>> => {
+      async (params: Partial<Reject>): Promise<ToolCallResult<Reject, {}>> => {
         const place = params.place;
         const time = params.time;
 
-        const validationError = validatePlaceAndTime<{}>(place, time);
+        const validationError = validatePlaceAndTime(place, time);
         if (validationError) {
           return validationError;
         }
@@ -642,21 +635,17 @@ function createAgentTools(
   const giveUpTool = tool2agent({
     description: `Give up on finding a meeting time. Call this if you believe it's impossible to find a time and place that works for everyone.`,
     inputSchema: giveUpSchema,
-    outputSchema: z.object({}),
-    execute: wrapExecute(
-      'give_up',
-      async (): Promise<ToolCallResult<z.infer<typeof giveUpSchema>, {}>> => {
-        // Print knowledge base before giving up (since giveUp throws exception)
-        console.log(`\n${formatKnowledgeBase(agentName, knowledgeBase)}\n`);
+    outputSchema: z.never(),
+    execute: wrapExecute('give_up', async (): Promise<ToolCallResult<GiveUp, never>> => {
+      // Print knowledge base before giving up (since giveUp throws exception)
+      console.log(`\n${formatKnowledgeBase(agentName, knowledgeBase)}\n`);
 
-        mailSystem.giveUp(agentName);
+      mailSystem.giveUp(agentName);
 
-        return {
-          ok: true,
-          value: {},
-        };
-      },
-    ),
+      return {
+        ok: true,
+      };
+    }),
   });
 
   return {
