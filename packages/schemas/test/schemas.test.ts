@@ -12,8 +12,8 @@ import {
   mkToolCallRejectedSchema,
   mkToolCallResultSchema,
   mkTool2AgentSchema,
-  nonEmptyArray,
 } from '../src/index.js';
+import { nonEmptyArray } from '../src/schema-tools.js';
 
 // Helper to create key enum using z.keyof() (Zod v4+)
 function createKeyEnum(inputSchema: z.ZodObject<any>): z.ZodEnum<any> | null {

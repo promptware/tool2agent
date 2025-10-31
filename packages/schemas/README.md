@@ -2,41 +2,8 @@
 
 Zod schema generators for the tool2agent protocol.
 
-This package provides runtime schema generation functions that work with Zod v4.
+This package provides runtime schema generation functions that work with Zod.
 
-## Installation
+The schemas align with `@tool2agent/types` precisely.
 
-```bash
-npm install @tool2agent/schemas @tool2agent/types zod
-# or
-pnpm add @tool2agent/schemas @tool2agent/types zod
-# or
-yarn add @tool2agent/schemas @tool2agent/types zod
-```
-
-## Usage
-
-```typescript
-import { z } from 'zod';
-import { mkTool2AgentSchema } from '@tool2agent/schemas';
-
-const inputSchema = z.object({
-  name: z.string(),
-  age: z.number(),
-});
-
-const outputSchema = z.object({
-  id: z.string(),
-});
-
-const toolCallResultSchema = mkTool2AgentSchema(inputSchema, outputSchema);
-```
-
-## Compatibility
-
-- **Zod**: Requires v4 (`^4`)
-- **TypeScript**: Requires TypeScript 5.8+
-
-## Related Packages
-
-- [`@tool2agent/types`](https://github.com/promptware/tool2agent/tree/master/packages/types) - Core type definitions for the tool2agent protocol
+The spec (types) uses a lot of constraints that are easy to express as TS types, but explode in size when encoded as JSON schemas (e.g. `AtLeastOne`, `AtMostOne`). It is not recommended to use the generated schemas for validation in production - but the schemas are still useful when testing tooling implementations, e.g. in languages other than TypeScript.

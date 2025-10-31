@@ -288,15 +288,10 @@ function createKeyEnum(inputSchema: z.ZodObject<any>, keys: string[]): z.ZodEnum
  * @param outputSchema - Zod schema for the tool output type
  * @returns Zod schema for ToolCallResult<InputType, OutputType>
  */
-export function mkTool2AgentSchema<
-  S extends z.ZodObject<any>,
-  OutputType,
->(
+export function mkTool2AgentSchema<S extends z.ZodObject<any>, OutputType>(
   inputSchema: S,
   outputSchema: ZodType<OutputType>,
-): z.infer<S> extends ToolInputType
-  ? ZodType<ToolCallResult<z.infer<S>, OutputType>>
-  : never {
+): z.infer<S> extends ToolInputType ? ZodType<ToolCallResult<z.infer<S>, OutputType>> : never {
   type InputType = z.infer<S> & ToolInputType;
   const shape = inputSchema.shape;
   const keys = Object.keys(shape);
@@ -305,7 +300,8 @@ export function mkTool2AgentSchema<
   const validationResults = mkValidationResultsSchema<InputType>(inputSchema, paramKeyEnum);
   const accepted = mkToolCallAcceptedSchema<OutputType>(outputSchema);
   const rejected = mkToolCallRejectedSchema<InputType>(validationResults);
-  return mkToolCallResultSchema<InputType, OutputType>(accepted, rejected) as z.infer<S> extends ToolInputType
-    ? ZodType<ToolCallResult<z.infer<S>, OutputType>>
-    : never;
+  return mkToolCallResultSchema<InputType, OutputType>(
+    accepted,
+    rejected,
+  ) as z.infer<S> extends ToolInputType ? ZodType<ToolCallResult<z.infer<S>, OutputType>> : never;
 }

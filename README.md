@@ -48,6 +48,11 @@ The protocol is specified as TypeScript types and lives in this monorepo. See th
 
 ## Packages
 
+### For agent developers
+
 - `@tool2agent/ai` — Bindings for AI SDK.
-- `@tool2agent/types` — TypeScript type definitions for the protocol. Agent developers should not use this package directly.
-- `@tool2agent/schemas` — Reusable schemas and helpers.
+
+### For tool2agent tooling developers
+
+- `@tool2agent/types` — TypeScript type definitions for the protocol that act as a specification.
+- `@tool2agent/schemas` — Zod schema generators that map user-defined domain type schemas to tool2agent schemas that use these domain types.

@@ -155,7 +155,10 @@ export function atLeastOneTagged<TShape extends Record<string, ZodType<any>>>(
 export function intersectSchemas<
   TLeft extends z.ZodObject<any> | z.ZodUnion<any>,
   TRight extends z.ZodObject<any> | z.ZodUnion<any>,
->(left: TaggedSchema<TLeft>, right: TaggedSchema<TRight>): TaggedSchema<z.ZodObject<any> | z.ZodUnion<any>> {
+>(
+  left: TaggedSchema<TLeft>,
+  right: TaggedSchema<TRight>,
+): TaggedSchema<z.ZodObject<any> | z.ZodUnion<any>> {
   if (left.type === 'object' && right.type === 'object') {
     // Both are objects: use extend to merge shapes
     const mergedObject = left.schema.extend(right.schema.shape).strict();
