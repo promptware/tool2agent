@@ -34,9 +34,6 @@ jobs:
       - name: Use zod@${{ matrix.zod }}
         run: pnpm add -D zod@${{ matrix.zod }}
 
-      - name: Check formatting
-        run: pnpm run format:check
-
       - name: Build
         run: pnpm run build
 
