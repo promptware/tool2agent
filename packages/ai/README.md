@@ -7,7 +7,7 @@ pnpm install @tool2agent/ai
 ```
 
 ```typescript
-import { tool2agent } from '@tool2agent/ai';
+import { tool2agent, mkTool } from '@tool2agent/ai';
 ```
 
 ## Motivation
@@ -18,7 +18,21 @@ import { tool2agent } from '@tool2agent/ai';
 
 ## About
 
-This interface wires together tool2agent types and AI SDK by translating tool2agent tool parameters to AI SDK `Tool` parameters:
+This package implements tool2agent bindings for AI SDK in two forms:
+
+- `mkTool` (a.k.a. "tool builder") - a type-safe mini-framework for creating interactive LLM tools with rich feedback.
+- `tool2agent()` function as an enriched replacement for AI SDK `tool()` that gives more manual control to the user.
+
+### Tool builder
+
+Tool builder implementation is the main value proposition of tool2agent so far.
+
+### `tool2agent()` function
+
+This interface wires together tool2agent types and AI SDK by translating tool2agent tool parameters to AI SDK `tool()` parameters.
+
+<details>
+<summary><strong>Show type definition</strong></summary>
 
 ```typescript
 export type Tool2Agent<InputType extends ToolInputType, OutputType> = Tool<
@@ -26,13 +40,19 @@ export type Tool2Agent<InputType extends ToolInputType, OutputType> = Tool<
   // to attempt calling the tool without providing the required parameters
   // just to get some feedback, like suggested values.
   Partial<InputType>,
-  // output is always a ToolCallResult that can be either accepted (with output value),
+  // output is always a `ToolCallResult` that can be either accepted (with output value),
   // or rejected (with mandatory feedback)
   ToolCallResult<InputType, OutputType>
 >;
 ```
 
-`tool2agent()`, the main function of the package, allows defining AI SDK LLM tools using a single `execute()` method that handles both validation and execution, returning structured feedback via `ToolCallResult`.
+- See [`ToolCallResult` definition](../types/src/tool2agent.ts)
+</details>
+
+`tool2agent()` function allows defining AI SDK LLM tools using an `execute()` method that handles both validation and execution, returning structured feedback via `ToolCallResult`.
+
+<details>
+<summary><strong>How to use tool2agent</strong></summary>
 
 - `execute()` accepts a partial (with all fields optional) tool payload, and returns a `ToolCallResult` that can either succeed (`ok: true`) with the output value, or fail (`ok: false`) with structured feedback info.
 
@@ -60,13 +80,18 @@ export function tool2agent<
 ): Tool2Agent<z.infer<InputSchema> & ToolInputType, z.infer<OutputSchema>>;
 ```
 
-### Differences between `tool()` and `tool2agent()`
+</details>
+
+<details>
+<summary><strong>Differences between <code>tool()</code> and <code>tool2agent()</code></strong></summary>
 
 - AI SDK `tool()` does not do anything, and exists only for type checking, while `tool2agent()` builds tool's `execute()` method
 - `tool()` passes exceptions through, while `tool2agent()` catches exceptions and returns them formatted nicely to the LLM as tool2agent `rejectionReasons`
 - `tool2agent()` mandates input and output schemas. Use `never` / `z.never()` for output schema if it is not needed.
 - `tool2agent()` expects a json-serializable output type, and for this reason it does not support providing custom `toModelOutput`
 - `tool2agent()` input type is `Partial<InputType>` instead of `InputType`, allowing the LLM to call the tool with incomplete parameters to get validation feedback
+
+</details>
 
 ## Examples
 

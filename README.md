@@ -4,7 +4,7 @@
 
 tool2agent is a protocol that enables LLM agents to navigate complex business constraints via trial and error by communicating rich and structured feedback data from tools.
 
-Real-world domain constraints are complex, dynamic, and non-publicly-known — in other words, can't be fed into an LLM context. tool2agent defines rules for producing structured errors and suggestions that give an agent enough context to iteratively improve on its request until the goal is achieved.
+Real-world domain constraints are complex, dynamic, and non-publicly-known — in other words, can't be fed into a LLM context. tool2agent defines rules for producing structured errors and suggestions that give an agent enough context to iteratively improve on its request until the goal is achieved.
 
 Technically speaking, tool2agent is a collection of schemas that allow structuring tool call feedback flows in a predictable manner.
 
@@ -41,10 +41,6 @@ In the context of agentic workflows, most tools will not be called, so there is 
 Although there are common LLM tool response validation patterns (beyond schemas), in a real application they may not be turned into reusable code, because that would require additional engineering efforts.
 
 **Structuring the way information flows from tools to LLM allows for programmatic consumption of that data, e.g. in the form of reusable middleware.**
-
-## Specification
-
-The protocol is specified as TypeScript types and lives in this monorepo. See the packages section below for where to find individual packages.
 
 ## Packages
 

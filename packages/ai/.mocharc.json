@@ -1,0 +1,6 @@
+{
+  "spec": "test/**/*.ts",
+  "loader": "ts-node/esm",
+  "extensions": ["ts"],
+  "recursive": true
+}
