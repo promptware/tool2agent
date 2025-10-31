@@ -1,197 +1,26 @@
 import 'dotenv/config';
 import { z } from 'zod';
 import { tool2agent } from '../src/index.js';
-import type { ToolCallResult, ToolInputType } from '@tool2agent/types';
+import type { ToolCallResult } from '@tool2agent/types';
 import { generateText } from 'ai';
 import { openrouter } from '@openrouter/ai-sdk-provider';
-
-// Schemas
-const placeSchema = z.enum(['bar', 'museum']);
-const timeSchema = z.enum(['morning', 'evening']);
-const agentNameSchema = z.enum(['Alice', 'Bob', 'Carol', 'Dave']);
-
-// Types derived from schemas
-type Place = z.infer<typeof placeSchema>;
-type Time = z.infer<typeof timeSchema>;
-type AgentName = z.infer<typeof agentNameSchema>;
-
-const messageSchema = z.object({
-  from: agentNameSchema,
-  content: z.string(),
-});
-
-type Message = z.infer<typeof messageSchema>;
-
-// Custom exception for when an agent gives up
-class AgentGaveUpError extends Error {
-  constructor(public agent: AgentName) {
-    super(`${agent} gave up`);
-    this.name = 'AgentGaveUpError';
-  }
-}
-
-// Custom exception for when all agents confirm successfully
-class AllAgentsConfirmedError extends Error {
-  constructor(public meeting: { place: Place; time: Time }) {
-    super(`All agents confirmed: ${meeting.place} at ${meeting.time}`);
-    this.name = 'AllAgentsConfirmedError';
-  }
-}
-
-// Mail system - shared state across all agents
-class MailSystem {
-  private queues: Map<AgentName, Message[]> = new Map();
-  confirmations: Map<AgentName, { place: Place; time: Time }> = new Map();
-  givenUp: Set<AgentName> = new Set();
-  private allMessages: Message[] = [];
-
-  constructor() {
-    const agents: AgentName[] = agentNameSchema.options as AgentName[];
-    for (const agent of agents) {
-      this.queues.set(agent, []);
-    }
-  }
-
-  broadcastMessage(from: AgentName, content: string): void {
-    const message: Message = {
-      from,
-      content,
-    };
-    this.allMessages.push(message);
-
-    // Add message to all agents' queues (except the sender)
-    const allAgents: AgentName[] = agentNameSchema.options as AgentName[];
-    for (const agent of allAgents) {
-      if (agent !== from) {
-        const queue = this.queues.get(agent);
-        if (queue) {
-          queue.push(message);
-        }
-      }
-    }
-
-    console.log(`📢 ${from}: ${content}`);
-  }
-
-  getMessages(agent: AgentName): Message[] {
-    const queue = this.queues.get(agent);
-    if (!queue) return [];
-    const messages = [...queue];
-    queue.length = 0; // Clear the queue after reading
-    return messages;
-  }
-
-  // Wait for new messages with polling
-  async waitForMessages(agent: AgentName, timeoutMs: number = 2000): Promise<Message[]> {
-    const startTime = Date.now();
-    while (Date.now() - startTime < timeoutMs) {
-      const queue = this.queues.get(agent);
-      if (queue && queue.length > 0) {
-        // Return messages and clear the queue
-        const messages = [...queue];
-        queue.length = 0;
-        return messages;
-      }
-      // Small delay before checking again
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    return [];
-  }
-
-  confirm(agent: AgentName, place: Place, time: Time): void {
-    this.confirmations.set(agent, { place, time });
-    console.log(`✅ ${agent} confirmed: ${place} at ${time}`);
-    this.broadcastMessage(agent, `I confirm: ${place} at ${time}`);
-
-    // Check if all agents have confirmed - if so, throw exception to stop experiment
-    if (this.hasAllConfirmed()) {
-      const meeting = this.getConfirmedMeeting();
-      if (meeting) {
-        throw new AllAgentsConfirmedError(meeting);
-      }
-    }
-  }
-
-  giveUp(agent: AgentName): void {
-    const isFirstGiveUp = this.givenUp.size === 0;
-    this.givenUp.add(agent);
-    console.log(`❌ ${agent} gave up`);
-    this.broadcastMessage(
-      agent,
-      `I'm giving up - I don't think we can find a time that works for everyone.`,
-    );
-
-    // Throw exception on first give up to end the experiment
-    if (isFirstGiveUp) {
-      throw new AgentGaveUpError(agent);
-    }
-  }
-
-  hasAllConfirmed(): boolean {
-    return this.confirmations.size === 4;
-  }
-
-  getConfirmedMeeting(): { place: Place; time: Time } | null {
-    if (!this.hasAllConfirmed()) return null;
-    const first = Array.from(this.confirmations.values())[0];
-    // Check if all confirmations match
-    for (const confirmation of this.confirmations.values()) {
-      if (confirmation.place !== first.place || confirmation.time !== first.time) {
-        return null;
-      }
-    }
-    return first;
-  }
-
-  hasAnyoneGivenUp(): boolean {
-    return this.givenUp.size > 0;
-  }
-
-  getAllMessages(): Message[] {
-    return [...this.allMessages];
-  }
-}
-
-// Knowledge base: tracks what each agent can/cannot do for each place/time
-type KnowledgeEntry = 'can' | 'cannot' | undefined;
-type KnowledgeBase = Map<AgentName, Map<Place, Map<Time, KnowledgeEntry>>>;
-
-// Helper function to format knowledge base for printing
-function formatKnowledgeBase(agentName: AgentName, knowledgeBase: KnowledgeBase): string {
-  const allAgents: AgentName[] = agentNameSchema.options as AgentName[];
-  const allPlaces: Place[] = placeSchema.options as Place[];
-  const allTimes: Time[] = timeSchema.options as Time[];
-
-  const lines: string[] = [];
-  lines.push(`${agentName}'s Knowledge Base:`);
-
-  for (const agent of allAgents) {
-    lines.push(`  ${agent}:`);
-    const agentMap = knowledgeBase.get(agent);
-    if (agentMap) {
-      for (const place of allPlaces) {
-        const timeMap = agentMap.get(place);
-        if (timeMap) {
-          const statuses: string[] = [];
-          for (const time of allTimes) {
-            const status = timeMap.get(time);
-            if (status === undefined) {
-              statuses.push(`${time}: unknown`);
-            } else {
-              statuses.push(`${time}: ${status}`);
-            }
-          }
-          lines.push(`    ${place}: ${statuses.join(', ')}`);
-        }
-      }
-    }
-  }
-
-  return lines.join('\n');
-}
+import {
+  Place,
+  Time,
+  AgentName,
+  KnowledgeBase,
+  placeSchema,
+  timeSchema,
+  agentNameSchema,
+  AgentGaveUpError,
+  AllAgentsConfirmedError,
+  type AgentConstraints,
+} from './agent-consensus/types.js';
+import { MailSystem } from './agent-consensus/mail.js';
+import { formatKnowledgeBase, initializeKnowledgeBase } from './agent-consensus/knowledge-base.js';
 
 // Single source of truth for agent constraints
-const AGENT_CONSTRAINTS: Record<AgentName, Record<Place, Record<Time, 'can' | 'cannot'>>> = {
+const AGENT_CONSTRAINTS: AgentConstraints = {
   Alice: {
     bar: { morning: 'cannot', evening: 'can' },
     museum: { morning: 'can', evening: 'can' },
@@ -209,43 +38,6 @@ const AGENT_CONSTRAINTS: Record<AgentName, Record<Place, Record<Time, 'can' | 'c
     museum: { morning: 'can', evening: 'can' },
   },
 };
-
-// Initialize knowledge base with agent's own constraints
-function initializeKnowledgeBase(agentName: AgentName): KnowledgeBase {
-  const kb: KnowledgeBase = new Map();
-  const allAgents: AgentName[] = agentNameSchema.options as AgentName[];
-  const allPlaces: Place[] = placeSchema.options as Place[];
-  const allTimes: Time[] = timeSchema.options as Time[];
-
-  // Initialize all agents, places, times as undefined (unknown)
-  for (const agent of allAgents) {
-    const agentMap = new Map<Place, Map<Time, KnowledgeEntry>>();
-    for (const place of allPlaces) {
-      const timeMap = new Map<Time, KnowledgeEntry>();
-      for (const time of allTimes) {
-        timeMap.set(time, undefined);
-      }
-      agentMap.set(place, timeMap);
-    }
-    kb.set(agent, agentMap);
-  }
-
-  // Set this agent's own constraints from single source of truth
-  const selfMap = kb.get(agentName)!;
-  const constraints = AGENT_CONSTRAINTS[agentName];
-
-  for (const place of allPlaces) {
-    for (const time of allTimes) {
-      const status = constraints[place][time];
-      selfMap.get(place)!.set(time, status);
-      console.log(
-        `🧠 ${agentName} initialized knowledge: ${agentName} ${status} attend ${place} at ${time}`,
-      );
-    }
-  }
-
-  return kb;
-}
 
 // Create tools for an agent
 function createAgentTools(
@@ -659,7 +451,7 @@ function createAgentTools(
 
 // Run a single agent with a single generateText call
 async function runAgent(agentName: AgentName, mailSystem: MailSystem): Promise<void> {
-  const knowledgeBase = initializeKnowledgeBase(agentName);
+  const knowledgeBase = initializeKnowledgeBase(agentName, AGENT_CONSTRAINTS);
   const tools = createAgentTools(agentName, mailSystem, knowledgeBase);
   const model = openrouter('openai/gpt-5-mini');
 
@@ -743,7 +535,7 @@ IMPORTANT:
   if (mailSystem.hasAllConfirmed()) {
     const meeting = mailSystem.getConfirmedMeeting();
     if (meeting) {
-      throw new AllAgentsConfirmedError(meeting);
+      return;
     }
   }
 
@@ -822,8 +614,9 @@ async function main() {
     }
     // Re-throw other errors
     throw error;
+  } finally {
+    clearInterval(checkInterval);
   }
-  clearInterval(checkInterval);
 
   // Final summary
   console.log('\n' + '='.repeat(80));
@@ -846,6 +639,12 @@ async function main() {
 }
 
 main().catch(err => {
+  // AllAgentsConfirmedError indicates success, don't treat it as an error
+  if (err instanceof AllAgentsConfirmedError) {
+    // Already handled in main(), exit successfully without printing error
+    process.exit(0);
+  }
+  // AgentGaveUpError and other errors should be logged
   console.error(err);
   process.exit(1);
 });
