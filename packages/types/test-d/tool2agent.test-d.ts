@@ -21,21 +21,77 @@ type TestParams = {
 // Valid: Accepted tool call with all required fields
 const validAccepted: ToolCallAccepted<TestParams> = {
   ok: true,
-  value: { name: 'John', age: 30 },
+  name: 'John',
+  age: 30,
 };
 
 // Valid: Accepted with optional feedback
 const validAcceptedWithFeedback: ToolCallAccepted<TestParams> = {
   ok: true,
-  value: { name: 'John', age: 30 },
+  name: 'John',
+  age: 30,
   feedback: ['Good input'],
 };
 
 // Valid: Accepted with instructions
 const validAcceptedWithInstructions: ToolCallAccepted<TestParams> = {
   ok: true,
-  value: { name: 'John', age: 30 },
+  name: 'John',
+  age: 30,
   instructions: ['Please continue'],
+};
+
+// Valid: Accepted with instructions
+const invalidAcceptedDueToCollision: ToolCallAccepted<{ feedback: number[] }> = {
+  ok: true,
+  // @ts-expect-error - feedback is not a string
+  feedback: [1],
+};
+
+// Valid: Accepted with object keys that collide with the ToolCallAccepted type
+const validAcceptedDespiteCollision2: ToolCallAccepted<{ ok: boolean }> = {
+  ok: true,
+};
+
+// @ts-expect-error - ok: string collides with ok: boolean, so the whole type becomes `never`
+const inValidAcceptedDueToCollision3: ToolCallAccepted<{ ok: string }> = {};
+
+const validAcceptedEmptyObject: ToolCallAccepted<{}> = {
+  ok: true,
+};
+
+const emptyObjectSchema = z.object({});
+const validAcceptedEmptyObject2: ToolCallAccepted<z.infer<typeof emptyObjectSchema>> = {
+  ok: true,
+};
+
+const okTrueObjectSchema = z.object({ ok: z.literal(true) });
+const validAcceptedOkTrue: ToolCallAccepted<z.infer<typeof okTrueObjectSchema>> = {
+  ok: true,
+};
+
+const okNumberObjectSchema = z.object({ ok: z.number() });
+const invalidAcceptedOkNumber: ToolCallAccepted<z.infer<typeof okNumberObjectSchema>> = {
+  // @ts-expect-error - ok is not a boolean
+  ok: true,
+};
+
+const invalidAcceptedOkNumber2: ToolCallAccepted<z.infer<typeof okNumberObjectSchema>> = {
+  // @ts-expect-error - ok is not a boolean
+  ok: 1,
+};
+
+const feedbackObjectSchema = z.object({ feedback: z.array(z.string()) });
+const validAcceptedFeedback: ToolCallAccepted<z.infer<typeof feedbackObjectSchema>> = {
+  ok: true,
+  feedback: ['Good input'],
+};
+
+const feedbackNumbersSchema = z.object({ feedback: z.array(z.number()) });
+const invalidAcceptedFeedbackNumbers: ToolCallAccepted<z.infer<typeof feedbackNumbersSchema>> = {
+  ok: true,
+  // @ts-expect-error - feedback is not an array of strings
+  feedback: [1, 2, 3],
 };
 
 // Invalid: Missing value field - demonstrate via function parameter

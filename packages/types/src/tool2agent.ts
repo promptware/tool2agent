@@ -16,17 +16,34 @@ export type ToolCallResult<InputType extends ToolInputType, OutputType> =
 
 /**
  * Accepted tool call.
+ * Must contain ok: true, the rest of the fields, and (optionally) feedback and instructions.
  */
 export type ToolCallAccepted<OutputType> = {
   ok: true;
-} & ([OutputType] extends [never]
-  ? {
-      value?: never; // Explicitly disallow value property
-    }
-  : {
-      value: OutputType;
-    }) &
+} &
+  // If OutputType is never, we don't allow value fields at all.
+  ([OutputType] extends [never]
+    ? {
+        value?: never; // Explicitly disallow value property
+      }
+    : // If OutputType is Record<string, never> (empty object from z.object({})), treat it like never (we do not add any value fields)
+      [OutputType] extends [Record<string, never>]
+      ? {
+          value?: never; // Explicitly disallow value property
+        }
+      : // If OutputType is {} (plain empty object), treat it like never
+        [OutputType] extends [{}]
+        ? // If OutputType has keys, use it directly (i.e. object keys are placed alongside ok:true)
+          FlattenOrWrapInValueField<OutputType>
+        : // If OutputType is a record, we use it directly
+          FlattenOrWrapInValueField<OutputType>) &
   FreeFormFeedback;
+
+type FlattenOrWrapInValueField<T> = [T] extends [Record<string, unknown>]
+  ? T
+  : {
+      value: T;
+    };
 
 export type FreeFormFeedback = {
   /** Freeform feedback for the tool call. */

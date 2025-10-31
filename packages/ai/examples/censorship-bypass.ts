@@ -102,7 +102,7 @@ const searchTool = tool2agent({
 
     const response: ToolCallAccepted<SearchToolOutput> = {
       ok: true,
-      value: { results: docs },
+      results: docs,
     };
     console.log('execute result (accepted):', JSON.stringify(response, null, 2));
     return response;

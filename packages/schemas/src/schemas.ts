@@ -1,4 +1,4 @@
-import { type ZodType, z, ZodNever } from 'zod';
+import { type ZodType, z, ZodNever, ZodObject } from 'zod';
 import type {
   ToolInputType,
   ToolCallResult,
@@ -219,13 +219,36 @@ export function mkToolCallAcceptedSchema<OutputType>(
     feedback: nonEmptyArray(z.string()).optional(),
     instructions: nonEmptyArray(z.string()).optional(),
   };
-  const objectWithValue = isNever
-    ? baseObject
-    : {
+
+  // Check if outputSchema is a ZodObject
+  const isObject = outputSchema instanceof ZodObject;
+  const isEmptyObject = isObject && Object.keys(outputSchema.shape).length === 0;
+
+  // Build the schema based on the output type:
+  // 1. never -> no value field
+  // 2. empty object (z.object({})) -> no value field
+  // 3. object with keys -> merge keys directly (no value wrapper)
+  // 4. otherwise -> wrap in value field
+  if (isNever || isEmptyObject) {
+    // No value field - return base object only
+    return z.object(baseObject).strict() as unknown as z.ZodType<ToolCallAccepted<OutputType>>;
+  } else if (isObject) {
+    // Object with keys - merge the object's shape directly into the result
+    return z
+      .object({
+        ...baseObject,
+        ...outputSchema.shape,
+      })
+      .strict() as unknown as z.ZodType<ToolCallAccepted<OutputType>>;
+  } else {
+    // Other types - wrap in value field
+    return z
+      .object({
         ...baseObject,
         value: outputSchema,
-      };
-  return z.object(objectWithValue).strict() as unknown as z.ZodType<ToolCallAccepted<OutputType>>;
+      })
+      .strict() as unknown as z.ZodType<ToolCallAccepted<OutputType>>;
+  }
 }
 
 export function mkToolCallRejectedSchema<InputType extends ToolInputType>(

@@ -24,9 +24,7 @@ const toolParameters: Tool2AgentOptions<InputSchema, OutputSchema> = {
     }
     return {
       ok: true,
-      value: {
-        results: ['Query reversed: ' + params.query.split('').reverse().join('')],
-      },
+      results: ['Query reversed: ' + params.query.split('').reverse().join('')],
     };
   },
 };
@@ -78,7 +76,7 @@ const secretsFilterMiddleware = (
         return result;
       }
       // Check the output for secrets
-      const resultString = JSON.stringify(result.value);
+      const resultString = JSON.stringify(result);
       if (secrets.some(secret => resultString.includes(secret))) {
         return {
           ok: false,

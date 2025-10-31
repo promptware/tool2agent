@@ -44,7 +44,8 @@ const toolCallResultSchema = mkTool2AgentSchema(inputSchema, outputSchema);
 type ToolCallResultType = z.infer<typeof toolCallResultSchema>;
 const toolCallResult: ToolCallResultType = {
   ok: true,
-  value: { id: '1', createdAt: 'now' },
+  id: '1',
+  createdAt: 'now',
 };
 expectParseOK(toolCallResultSchema, toolCallResult);
 
@@ -251,15 +252,17 @@ test('validation results schemas', async t => {
 test('tool call schemas', async t => {
   await t.test('mkToolCallAcceptedSchema', () => {
     const acc = mkToolCallAcceptedSchema(outputSchema);
-    expectParseOK(acc, { ok: true, value: { id: '1', createdAt: 'now' } });
+    // Objects with keys are merged directly (no value wrapper)
+    expectParseOK(acc, { ok: true, id: '1', createdAt: 'now' });
     expectParseOK(acc, {
       ok: true,
-      value: { id: '1', createdAt: 'now' },
+      id: '1',
+      createdAt: 'now',
       feedback: ['done'],
     });
     expectParseFail(acc, { ok: true });
-    expectParseFail(acc, { ok: true, value: { id: '1' } });
-    expectParseFail(acc, { ok: true, value: { id: '1', createdAt: 'now' }, feedback: [] });
+    expectParseFail(acc, { ok: true, id: '1' });
+    expectParseFail(acc, { ok: true, id: '1', createdAt: 'now', feedback: [] });
   });
 
   await t.test('mkToolCallAcceptedSchema with z.never() - value field omitted', () => {
@@ -276,6 +279,49 @@ test('tool call schemas', async t => {
     expectParseFail(accNever, { ok: true, value: 123 });
     expectParseFail(accNever, { ok: true, value: [] });
     expectParseFail(accNever, { ok: true, value: undefined });
+  });
+
+  await t.test('mkToolCallAcceptedSchema with z.object({}) - value field omitted', () => {
+    const accEmpty = mkToolCallAcceptedSchema(z.object({}));
+    // Should accept objects without value field (same as z.never())
+    expectParseOK(accEmpty, { ok: true });
+    expectParseOK(accEmpty, { ok: true, feedback: ['done'] });
+    expectParseOK(accEmpty, { ok: true, instructions: ['do something'] });
+    expectParseOK(accEmpty, { ok: true, feedback: ['done'], instructions: ['do something'] });
+    // Should reject objects with value field (strict schema doesn't allow extra fields)
+    expectParseFail(accEmpty, { ok: true, value: { id: '1' } });
+    expectParseFail(accEmpty, { ok: true, value: null });
+    expectParseFail(accEmpty, { ok: true, value: 'anything' });
+    expectParseFail(accEmpty, { ok: true, value: 123 });
+    expectParseFail(accEmpty, { ok: true, value: [] });
+    expectParseFail(accEmpty, { ok: true, value: {} });
+    expectParseFail(accEmpty, { ok: true, value: undefined });
+  });
+
+  await t.test('mkToolCallAcceptedSchema with object with keys - keys merged directly', () => {
+    const accWithKeys = mkToolCallAcceptedSchema(outputSchema);
+    // Should accept objects with keys merged directly (no value wrapper)
+    expectParseOK(accWithKeys, { ok: true, id: '1', createdAt: 'now' });
+    expectParseOK(accWithKeys, {
+      ok: true,
+      id: '1',
+      createdAt: 'now',
+      feedback: ['done'],
+    });
+    expectParseOK(accWithKeys, {
+      ok: true,
+      id: '1',
+      createdAt: 'now',
+      instructions: ['do something'],
+    });
+    // Should reject objects without required keys
+    expectParseFail(accWithKeys, { ok: true });
+    expectParseFail(accWithKeys, { ok: true, id: '1' });
+    expectParseFail(accWithKeys, { ok: true, createdAt: 'now' });
+    // Should reject objects with value field (keys should be at top level)
+    expectParseFail(accWithKeys, { ok: true, value: { id: '1', createdAt: 'now' } });
+    // Should reject objects with invalid keys
+    expectParseFail(accWithKeys, { ok: true, id: '1', createdAt: 'now', feedback: [] });
   });
 
   await t.test('mkToolCallRejectedSchema', () => {
@@ -336,7 +382,7 @@ test('tool call schemas', async t => {
     const rej = mkToolCallRejectedSchema(vr);
     const res = mkToolCallResultSchema(acc, rej);
 
-    expectParseOK(res, { ok: true, value: { id: '1', createdAt: 'now' } });
+    expectParseOK(res, { ok: true, id: '1', createdAt: 'now' });
     expectParseOK(res, { ok: false, rejectionReasons: ['x'] });
     expectParseFail(res, { ok: true });
   });
@@ -347,7 +393,7 @@ test('end-to-end integration', async t => {
     const toolSchema = mkTool2AgentSchema(inputSchema, outputSchema);
 
     // accepted branch
-    expectParseOK(toolSchema, { ok: true, value: { id: '1', createdAt: 'now' } });
+    expectParseOK(toolSchema, { ok: true, id: '1', createdAt: 'now' });
 
     // rejected: validationResults with various refusal combinations
     expectParseOK(toolSchema, {
@@ -411,7 +457,8 @@ test('type inference tests', async t => {
 
     const accepted: AcceptedType = {
       ok: true,
-      value: { id: 'test-id', createdAt: '2024-01-01' },
+      id: 'test-id',
+      createdAt: '2024-01-01',
       feedback: ['Success'],
       instructions: ['Follow up'],
     };
@@ -421,7 +468,8 @@ test('type inference tests', async t => {
     // Negative: typed value violating schema constraints
     const invalidAcceptedTyped: AcceptedType = {
       ok: true,
-      value: { id: 'test-id', createdAt: '2024-01-01' },
+      id: 'test-id',
+      createdAt: '2024-01-01',
       // @ts-expect-error - Empty array violates NonEmptyArray constraint
       feedback: [], // Empty array violates NonEmptyArray constraint
     };
@@ -534,7 +582,8 @@ test('type inference tests', async t => {
 
     const accepted: EmptyToolResultType = {
       ok: true,
-      value: { id: '1', createdAt: 'now' },
+      id: '1',
+      createdAt: 'now',
     };
 
     expectParseOK(emptyToolSchema, accepted);
@@ -582,13 +631,11 @@ test('type inference tests', async t => {
 
     const complexAccepted: ComplexToolResultType = {
       ok: true,
-      value: {
-        result: [
-          { id: '1', score: 95 },
-          { id: '2', score: 87 },
-        ],
-        metadata: { timestamp: '2024-01-01', version: '1.0' },
-      },
+      result: [
+        { id: '1', score: 95 },
+        { id: '2', score: 87 },
+      ],
+      metadata: { timestamp: '2024-01-01', version: '1.0' },
       feedback: ['Processing complete'],
     };
 
@@ -615,11 +662,9 @@ test('type inference tests', async t => {
     // Negative: invalid nested structure
     const invalidComplexTyped: ComplexToolResultType = {
       ok: true,
-      value: {
-        // @ts-expect-error - Missing required 'score' field in result array items
-        result: [{ id: '1' }], // Missing required 'score' field
-        metadata: { timestamp: '2024-01-01', version: '1.0' },
-      },
+      // @ts-expect-error - Missing required 'score' field in result array items
+      result: [{ id: '1' }], // Missing required 'score' field
+      metadata: { timestamp: '2024-01-01', version: '1.0' },
     };
 
     expectParseFail(complexToolSchema, invalidComplexTyped);

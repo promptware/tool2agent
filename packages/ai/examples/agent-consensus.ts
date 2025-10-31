@@ -105,10 +105,10 @@ function createAgentTools(
   type GiveUp = z.infer<typeof giveUpSchema>;
 
   // Helper function to validate place and time parameters
-  function validatePlaceAndTime(
+  function validatePlaceAndTime<OutputType>(
     place: Place | undefined,
     time: Time | undefined,
-  ): ToolCallResult<{ place: Place; time: Time }, any> | null {
+  ): ToolCallResult<{ place: Place; time: Time }, OutputType> | null {
     if (!place || !time) {
       return {
         ok: false,
@@ -117,17 +117,17 @@ function createAgentTools(
           place: place ? { valid: true } : { valid: false, refusalReasons: ['Place is required'] },
           time: time ? { valid: true } : { valid: false, refusalReasons: ['Time is required'] },
         },
-      } as ToolCallResult<{ place: Place; time: Time }, any>;
+      } as ToolCallResult<{ place: Place; time: Time }, OutputType>;
     }
     return null;
   }
 
   // Helper function to check if agent can attend based on knowledge base
-  function checkSelfCanAttend(
+  function checkSelfCanAttend<OutputType>(
     place: Place,
     time: Time,
     errorMessage: string,
-  ): ToolCallResult<{ place: Place; time: Time }, any> | null {
+  ): ToolCallResult<{ place: Place; time: Time }, OutputType> | null {
     const selfMap = knowledgeBase.get(agentName);
     if (selfMap) {
       const timeMap = selfMap.get(place);
@@ -137,7 +137,7 @@ function createAgentTools(
           return {
             ok: false,
             rejectionReasons: [errorMessage],
-          } as ToolCallResult<{ place: Place; time: Time }, any>;
+          } as ToolCallResult<{ place: Place; time: Time }, OutputType>;
         }
       }
     }
@@ -293,13 +293,13 @@ function createAgentTools(
         const place = params.place;
         const time = params.time;
 
-        const validationError = validatePlaceAndTime(place, time);
+        const validationError = validatePlaceAndTime<MailOutput>(place, time);
         if (validationError) {
           return validationError;
         }
 
         // Check knowledge base for this agent (like confirm does)
-        const selfError = checkSelfCanAttend(
+        const selfError = checkSelfCanAttend<MailOutput>(
           place!,
           time!,
           `You cannot propose ${place} at ${time} based on your constraints.`,
@@ -329,12 +329,10 @@ function createAgentTools(
 
         return {
           ok: true,
-          value: {
-            messages: messages.map(m => ({
-              from: m.from,
-              content: m.content,
-            })),
-          },
+          messages: messages.map(m => ({
+            from: m.from,
+            content: m.content,
+          })),
         };
       },
     ),
@@ -343,20 +341,20 @@ function createAgentTools(
   const confirmTool = tool2agent({
     description: `Confirm a meeting proposal. Call this when you agree to a specific place and time. All four agents must confirm the same place and time for the meeting to be scheduled.`,
     inputSchema: confirmSchema,
-    outputSchema: z.object({}),
+    outputSchema: z.never(),
     execute: wrapExecute(
       'confirm',
-      async (params: Partial<Confirm>): Promise<ToolCallResult<Confirm, {}>> => {
+      async (params: Partial<Confirm>): Promise<ToolCallResult<Confirm, never>> => {
         const place = params.place;
         const time = params.time;
 
-        const validationError = validatePlaceAndTime(place, time);
+        const validationError = validatePlaceAndTime<never>(place, time);
         if (validationError) {
           return validationError;
         }
 
         // Check knowledge base for this agent
-        const selfError = checkSelfCanAttend(
+        const selfError = checkSelfCanAttend<never>(
           place!,
           time!,
           `You cannot confirm ${place} at ${time} based on your constraints.`,
@@ -391,7 +389,6 @@ function createAgentTools(
         mailSystem.confirm(agentName, place!, time!);
         return {
           ok: true,
-          value: {},
         };
       },
     ),
@@ -407,7 +404,7 @@ function createAgentTools(
         const place = params.place;
         const time = params.time;
 
-        const validationError = validatePlaceAndTime(place, time);
+        const validationError = validatePlaceAndTime<{}>(place, time);
         if (validationError) {
           return validationError;
         }
@@ -418,7 +415,6 @@ function createAgentTools(
 
         return {
           ok: true,
-          value: {},
         };
       },
     ),
