@@ -1,8 +1,9 @@
 import { z } from 'zod';
-import { mkTool2AgentSchema } from '../src/schemas.js';
+import { mkTool2AgentSchema } from '@tool2agent/schemas';
 
 // Note: This script uses Zod v4's native z.toJSONSchema() method
 // which provides built-in JSON Schema conversion without external dependencies
+// Schema generation functionality has been moved to @tool2agent/schemas package
 
 // Example input schema - must be a ZodObject
 const inputSchema = z.object({

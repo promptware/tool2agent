@@ -1,6 +1,6 @@
 {
-  "name": "tool2agent",
-  "version": "1.0.1",
+  "name": "@tool2agent/types",
+  "version": "0.0.1",
   "description": "Type definitions for tool2agent: a protocol for structured LLM tool feedback",
   "type": "module",
   "main": "dist-cjs/index.js",
@@ -26,9 +26,8 @@
     "build": "tsc && tsc -p tsconfig.cjs.json",
     "build:watch": "tsc --watch",
     "clean": "rm -rf dist dist-cjs",
-    "test": "pnpm run test:types && pnpm run test:runtime",
+    "test": "pnpm run test:types",
     "test:types": "tsc --project test-d/tsconfig.json",
-    "test:runtime": "tsc --project test/tsconfig.json && tsx test/*.test.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepack": "pnpm run build"
@@ -52,9 +51,7 @@
   "devDependencies": {
     "@types/node": "^22.15.29",
     "prettier": "^3.6.2",
-    "tsx": "^4.20.6",
-    "typescript": "^5.8.3",
-    "zod": "^4.0.0"
+    "typescript": "^5.8.3"
   },
   "peerDependencies": {
     "zod": "^3 || ^4"

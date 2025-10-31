@@ -50,7 +50,6 @@ The specification is expressed as TypeScript types and is available [here](./src
 pnpm i tool2agent
 ```
 
-Additionally, this package provides [machinery](./src/schemas.ts) for producing Zod schemas for tool2agent types, that are supposed to be parameterized by user-provided types. These schemas should _never_ be fed to a LLM, because they explode exponentially in size with the number of parameters due to the way we enforce correctness in generated Zod schemas.
 
 ## How do I use it?
 
@@ -59,3 +58,4 @@ The specification itself only makes sense for those who develop tool2agent-enabl
 Agent developers should use tool2agent-based libraries:
 
 - [`@tool2agent/ai-sdk`](https://github.com/promptware/tool2agent-ai-sdk) [(NPM)](https://npmjs.com/package/@tool2agent/ai-sdk) - tool2agent bindings for AI SDK
+- [`@tool2agent/schemas`](https://github.com/promptware/tool2agent-schemas)
