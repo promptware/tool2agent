@@ -112,4 +112,4 @@ export function tool2agent<
 
 ## See also
 
-- [tool2agent type definitions](https://github.com/promptware/tool2agent/blob/master/src/tool2agent.ts)
+- [tool2agent type definitions](../types/src/tool2agent.ts)
