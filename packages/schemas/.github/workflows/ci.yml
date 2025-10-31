@@ -12,7 +12,6 @@ jobs:
     strategy:
       matrix:
         node-version: [18.x, 22.x]
-        zod: [3, 4]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,26 +28,10 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Use zod@${{ matrix.zod }}
-        run: pnpm add -D zod@${{ matrix.zod }} --filter '@tool2agent/types'
-
-      - name: Build types
-        if: matrix.zod == 3
-        run: pnpm --filter @tool2agent/types build
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build
-        if: matrix.zod == 4
         run: pnpm run build
 
       - name: Run tests
-        if: matrix.zod == 3
-        run: pnpm --filter @tool2agent/types test
-
-      - name: Run tests
-        if: matrix.zod == 4
         run: pnpm run test
-
-      - name: Check formatting
-        run: pnpm run format:check

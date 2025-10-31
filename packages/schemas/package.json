@@ -1,7 +1,7 @@
 {
-  "name": "@tool2agent/types",
+  "name": "@tool2agent/schemas",
   "version": "0.0.1",
-  "description": "Type definitions for tool2agent: a protocol for structured LLM tool feedback",
+  "description": "Zod schema generators for tool2agent protocol",
   "type": "module",
   "main": "dist-cjs/index.js",
   "module": "dist/index.js",
@@ -26,12 +26,15 @@
     "build": "tsc && tsc -p tsconfig.cjs.json",
     "build:watch": "tsc --watch",
     "clean": "rm -rf dist dist-cjs",
-    "test": "pnpm run test:types",
+    "test": "pnpm run test:types && pnpm run test:runtime",
     "test:types": "tsc --project test-d/tsconfig.json",
+    "test:runtime": "tsc --project test/tsconfig.json && tsx test/*.test.ts",
     "prepack": "pnpm run build"
   },
   "keywords": [
     "tool2agent",
+    "zod",
+    "schemas",
     "llm",
     "ai"
   ],
@@ -46,12 +49,16 @@
     "url": "https://github.com/promptware/tool2agent/issues"
   },
   "readme": "README.md",
+  "dependencies": {
+    "@tool2agent/types": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "^22.15.29",
-    "@tool2agent/schemas": "workspace:*",
-    "typescript": "^5.8.3"
+    "tsx": "^4.20.6",
+    "typescript": "^5.8.3",
+    "zod": "^4.1.12"
   },
   "peerDependencies": {
-    "zod": "^3 || ^4"
+    "zod": "^4"
   }
 }

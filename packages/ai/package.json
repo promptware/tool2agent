@@ -1,7 +1,7 @@
 {
-  "name": "@tool2agent/types",
+  "name": "@tool2agent/ai",
   "version": "0.0.1",
-  "description": "Type definitions for tool2agent: a protocol for structured LLM tool feedback",
+  "description": "tool2agent bindings for AI SDK",
   "type": "module",
   "main": "dist-cjs/index.js",
   "module": "dist/index.js",
@@ -26,12 +26,14 @@
     "build": "tsc && tsc -p tsconfig.cjs.json",
     "build:watch": "tsc --watch",
     "clean": "rm -rf dist dist-cjs",
-    "test": "pnpm run test:types",
-    "test:types": "tsc --project test-d/tsconfig.json",
-    "prepack": "pnpm run build"
+    "prepack": "pnpm run build",
+    "example:censorship-bypass": "pnpx tsx examples/censorship-bypass.ts",
+    "example:middleware": "pnpx tsx examples/middleware.ts",
+    "example:chat-room": "pnpx tsx examples/chat-room.ts"
   },
   "keywords": [
     "tool2agent",
+    "ai-sdk",
     "llm",
     "ai"
   ],
@@ -47,11 +49,19 @@
   },
   "readme": "README.md",
   "devDependencies": {
-    "@types/node": "^22.15.29",
-    "@tool2agent/schemas": "workspace:*",
-    "typescript": "^5.8.3"
+    "@types/node": "^24.9.2",
+    "dotenv": "^17.2.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "zod": "^4.1.12"
+  },
+  "dependencies": {
+    "@tool2agent/types": "workspace:*",
+    "@ai-sdk/provider-utils": "^3.0.13",
+    "@openrouter/ai-sdk-provider": "^1.2.0",
+    "ai": "^5.0.81"
   },
   "peerDependencies": {
-    "zod": "^3 || ^4"
+    "zod": "^4"
   }
 }
