@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { z, type ZodType } from 'zod';
 
 import {
-  nonEmptyArray,
   mkFreeFormFeedbackSchema,
   mkAcceptableValuesSchema,
   mkParameterFeedbackRefusalSchema,
@@ -14,6 +13,7 @@ import {
   mkToolCallResultSchema,
   mkTool2AgentSchema,
 } from '../src/schemas.js';
+import { nonEmptyArray } from '../src/schema-tools.js';
 
 const expectParseOK = <T>(schema: ZodType<T>, value: unknown): void => {
   assert.doesNotThrow(() => schema.parse(value));
@@ -253,6 +253,22 @@ test('tool call schemas', async t => {
     expectParseFail(acc, { ok: true });
     expectParseFail(acc, { ok: true, value: { id: '1' } });
     expectParseFail(acc, { ok: true, value: { id: '1', createdAt: 'now' }, feedback: [] });
+  });
+
+  await t.test('mkToolCallAcceptedSchema with z.never() - value field omitted', () => {
+    const accNever = mkToolCallAcceptedSchema(z.never());
+    // Should accept objects without value field
+    expectParseOK(accNever, { ok: true });
+    expectParseOK(accNever, { ok: true, feedback: ['done'] });
+    expectParseOK(accNever, { ok: true, instructions: ['do something'] });
+    expectParseOK(accNever, { ok: true, feedback: ['done'], instructions: ['do something'] });
+    // Should reject objects with value field (strict schema doesn't allow extra fields)
+    expectParseFail(accNever, { ok: true, value: { id: '1' } });
+    expectParseFail(accNever, { ok: true, value: null });
+    expectParseFail(accNever, { ok: true, value: 'anything' });
+    expectParseFail(accNever, { ok: true, value: 123 });
+    expectParseFail(accNever, { ok: true, value: [] });
+    expectParseFail(accNever, { ok: true, value: undefined });
   });
 
   await t.test('mkToolCallRejectedSchema', () => {

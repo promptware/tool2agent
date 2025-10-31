@@ -1,4 +1,4 @@
-import { type ZodType, z } from 'zod';
+import { type ZodType, z, ZodNever } from 'zod';
 import type {
   ToolInputType,
   ToolCallResult,
@@ -18,23 +18,8 @@ import {
   atLeastOne,
   atLeastOneTagged,
   tagObject,
-  tagUnion,
   untag,
   intersectSchemas,
-  type TaggedSchema,
-  type TaggedUnionSchema,
-} from './schema-tools.js';
-
-// Re-export schema tools for convenience
-export {
-  nonEmptyArray,
-  atMostOne,
-  atLeastOne,
-  tagObject,
-  tagUnion,
-  untag,
-  intersectSchemas,
-  type TaggedSchema,
   type TaggedUnionSchema,
 } from './schema-tools.js';
 
@@ -91,7 +76,7 @@ export function mkParameterFeedbackRefusalSchema<InputType extends ToolInputType
 /**
  * Tagged version of mkParameterFeedbackRefusalSchema
  */
-function mkParameterFeedbackRefusalSchemaTagged<InputType extends ToolInputType>(
+function mkParameterFeedbackRefusalSchemaTagged(
   paramKeyEnum: z.ZodEnum<any> | null,
 ): TaggedUnionSchema<z.ZodUnion<any>> {
   const branches: Record<string, ZodType<any>> = {
@@ -213,17 +198,36 @@ export function mkValidationResultsSchema<InputType extends ToolInputType>(
   }>;
 }
 
-export function mkToolCallAcceptedSchema<OutputT>(
-  outputSchema: ZodType<OutputT>,
-): z.ZodType<ToolCallAccepted<OutputT>> {
-  return z
-    .object({
-      ok: z.literal(true),
-      value: outputSchema,
-      feedback: nonEmptyArray(z.string()).optional(),
-      instructions: nonEmptyArray(z.string()).optional(),
-    })
-    .strict() as z.ZodType<ToolCallAccepted<OutputT>>;
+export function mkToolCallAcceptedSchema<OutputType>(
+  outputSchema: ZodType<OutputType>,
+): z.ZodType<ToolCallAccepted<OutputType>> {
+  // Check if outputSchema is z.never() using instanceof.
+  //
+  // NOTE: There is a discrepancy between type-level and runtime checks:
+  // - Type-level: ToolCallAccepted<OutputType> checks `OutputType extends never`
+  //   which matches any schema TypeScript infers as `never`
+  // - Runtime: We check `instanceof ZodNever` which only matches z.never()
+  //
+  // This means schemas like `z.union([])` or incompatible intersections may
+  // type to `never` but won't be detected here. This is OK for us:
+  // - z.never() is the explicit, idiomatic way to express "no output"
+  // - Other schemas that happen to type to `never` indicate a bug in the schema
+  // - The runtime check should match explicit intent, not type inference
+  //
+  // If you need "no output", use z.never() explicitly.
+  const isNever = outputSchema instanceof ZodNever;
+  const baseObject = {
+    ok: z.literal(true),
+    feedback: nonEmptyArray(z.string()).optional(),
+    instructions: nonEmptyArray(z.string()).optional(),
+  };
+  const objectWithValue = isNever
+    ? baseObject
+    : {
+        ...baseObject,
+        value: outputSchema,
+      };
+  return z.object(objectWithValue).strict() as unknown as z.ZodType<ToolCallAccepted<OutputType>>;
 }
 
 export function mkToolCallRejectedSchema<InputType extends ToolInputType>(

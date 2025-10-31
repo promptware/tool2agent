@@ -28,7 +28,7 @@
     "clean": "rm -rf dist dist-cjs",
     "test": "pnpm run test:types && pnpm run test:runtime",
     "test:types": "tsc --project test-d/tsconfig.json",
-    "test:runtime": "tsc --project test/tsconfig.json && tsx test/mkTool2AgentSchema.test.ts",
+    "test:runtime": "tsc --project test/tsconfig.json && tsx test/*.test.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepack": "pnpm run build"

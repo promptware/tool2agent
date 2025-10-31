@@ -10,7 +10,7 @@ export type ToolInputType = Record<string, unknown>;
 
 /** The outermost type that characterizes the outcome of a tool call.
  */
-export type ToolCallResult<InputType extends ToolInputType, OutputType = any> =
+export type ToolCallResult<InputType extends ToolInputType, OutputType = never> =
   | ToolCallAccepted<OutputType>
   | ToolCallRejected<InputType>;
 
@@ -19,8 +19,12 @@ export type ToolCallResult<InputType extends ToolInputType, OutputType = any> =
  */
 export type ToolCallAccepted<OutputType> = {
   ok: true;
-  value: OutputType;
-} & FreeFormFeedback;
+} & (OutputType extends never
+  ? {}
+  : {
+      value: OutputType;
+    }) &
+  FreeFormFeedback;
 
 export type FreeFormFeedback = {
   /** Freeform feedback for the tool call. */

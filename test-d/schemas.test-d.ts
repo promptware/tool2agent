@@ -89,6 +89,13 @@ type _TestToolCallAccepted1 = Expect<
   Equal<InferredToolCallAccepted, ToolCallAccepted<TestOutputType>>
 >;
 
+// Test case: when outputSchema is z.never(), value field should be omitted
+const toolCallAcceptedNeverSchema = mkToolCallAcceptedSchema<never>(z.never());
+type InferredToolCallAcceptedNever = z.infer<typeof toolCallAcceptedNeverSchema>;
+type _TestToolCallAcceptedNever1 = Expect<
+  Equal<InferredToolCallAcceptedNever, ToolCallAccepted<never>>
+>;
+
 // ==================== ToolCallRejected Schema Tests ====================
 const toolCallRejectedSchema = mkToolCallRejectedSchema<TestInputType>(validationResultsSchema);
 type InferredToolCallRejected = z.infer<typeof toolCallRejectedSchema>;
