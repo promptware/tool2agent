@@ -47,6 +47,16 @@ export function untag<T extends TaggedSchema<any>>(tagged: T): z.ZodTypeAny {
 }
 
 /**
+ * Returns the union branches of a tagged schema.
+ * If the tagged schema is an object, returns a single-element array with that object.
+ */
+export function getUnionBranches(tagged: TaggedSchema<any>): z.ZodTypeAny[] {
+  return (tagged as any).type === 'union'
+    ? (tagged as TaggedUnionSchema<z.ZodUnion<any>>).branches
+    : [(tagged as TaggedObjectSchema<z.ZodObject<any>>).schema];
+}
+
+/**
  * Creates a Zod schema where at most one of the provided keys can be present.
  * Corresponds to AtMostOne type from types.ts
  */
@@ -145,18 +155,12 @@ export function atLeastOneTagged<TShape extends Record<string, ZodType<any>>>(
 export function intersectSchemas<
   TLeft extends z.ZodObject<any> | z.ZodUnion<any>,
   TRight extends z.ZodObject<any> | z.ZodUnion<any>,
->(left: TaggedSchema<TLeft>, right: TaggedSchema<TRight>): TaggedSchema<z.ZodUnion<any>> {
+>(left: TaggedSchema<TLeft>, right: TaggedSchema<TRight>): TaggedSchema<z.ZodObject<any> | z.ZodUnion<any>> {
   if (left.type === 'object' && right.type === 'object') {
     // Both are objects: use extend to merge shapes
     const mergedObject = left.schema.extend(right.schema.shape).strict();
-    // Wrap in union for consistency (single branch duplicated to satisfy Zod's union requirement).
-    // NOTE: z.union([obj, obj]) creates Type | Type which TypeScript preserves as a union type.
-    // This causes Equal<Type | Type, Type> to fail even though they're assignable in both directions,
-    // because Equal checks exact structural equality, not assignability.
-    return tagUnion(
-      z.union([mergedObject, mergedObject] as [any, any, ...any[]]) as z.ZodUnion<any>,
-      [mergedObject],
-    );
+    // Return a tagged object schema directly (no union) to preserve exact type identity
+    return tagObject(mergedObject);
   }
 
   if (left.type === 'object' && right.type === 'union') {

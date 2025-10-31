@@ -20,7 +20,9 @@ import {
   tagObject,
   untag,
   intersectSchemas,
+  getUnionBranches,
   type TaggedUnionSchema,
+  type TaggedSchema,
 } from './schema-tools.js';
 
 export function mkFreeFormFeedbackSchema(): z.ZodType<FreeFormFeedback> {
@@ -153,9 +155,9 @@ export function mkParameterFeedbackSchema<InputType extends ToolInputType, Value
   const validFalseTagged = intersectSchemas(validFalseWithAcceptableTagged, refusalSchemaTagged);
 
   // Union of valid: true and valid: false branches
-  // Both are unions now (intersectSchemas always returns a union)
-  const validTrueBranches = (validTrueTagged as TaggedUnionSchema<z.ZodUnion<any>>).branches;
-  const validFalseBranches = (validFalseTagged as TaggedUnionSchema<z.ZodUnion<any>>).branches;
+  // intersectSchemas may return an object or a union; normalize to union branches
+  const validTrueBranches = getUnionBranches(validTrueTagged as TaggedSchema<any>);
+  const validFalseBranches = getUnionBranches(validFalseTagged as TaggedSchema<any>);
   return z.union([...validTrueBranches, ...validFalseBranches] as [
     any,
     any,
@@ -286,10 +288,16 @@ function createKeyEnum(inputSchema: z.ZodObject<any>, keys: string[]): z.ZodEnum
  * @param outputSchema - Zod schema for the tool output type
  * @returns Zod schema for ToolCallResult<InputType, OutputType>
  */
-export function mkTool2AgentSchema<InputType extends ToolInputType, OutputType>(
-  inputSchema: z.ZodObject<any>,
+export function mkTool2AgentSchema<
+  S extends z.ZodObject<any>,
+  OutputType,
+>(
+  inputSchema: S,
   outputSchema: ZodType<OutputType>,
-): ZodType<ToolCallResult<InputType, OutputType>> {
+): z.infer<S> extends ToolInputType
+  ? ZodType<ToolCallResult<z.infer<S>, OutputType>>
+  : never {
+  type InputType = z.infer<S> & ToolInputType;
   const shape = inputSchema.shape;
   const keys = Object.keys(shape);
   const paramKeyEnum = createKeyEnum(inputSchema, keys);
@@ -297,5 +305,7 @@ export function mkTool2AgentSchema<InputType extends ToolInputType, OutputType>(
   const validationResults = mkValidationResultsSchema<InputType>(inputSchema, paramKeyEnum);
   const accepted = mkToolCallAcceptedSchema<OutputType>(outputSchema);
   const rejected = mkToolCallRejectedSchema<InputType>(validationResults);
-  return mkToolCallResultSchema<InputType, OutputType>(accepted, rejected);
+  return mkToolCallResultSchema<InputType, OutputType>(accepted, rejected) as z.infer<S> extends ToolInputType
+    ? ZodType<ToolCallResult<z.infer<S>, OutputType>>
+    : never;
 }
