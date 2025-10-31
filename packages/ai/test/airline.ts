@@ -4,6 +4,13 @@ import { AirlineSchedule, FlightEntry, FlightFilters } from './airline-schedule.
 import { uniq } from './utils.js';
 import { Tool2Agent } from '../src/tool2agent.js';
 
+// This example demonstrates how to use `mkTool()` to define a tool that:
+// - is interactive
+// - maintains ordering of parameter filling (via dependencies between fields)
+// - provides rich feedback to the LLM based on provided values
+//
+// To see how this tool can be plugged into the LLM, check out the `./airline-booking.test.ts` test file.
+
 // Our domain type for airline bookings. All fields are required.
 export const airlineBookingSchema = z.object({
   departure: z.string().min(1),

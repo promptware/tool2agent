@@ -20,12 +20,23 @@ import { tool2agent, mkTool } from '@tool2agent/ai';
 
 This package implements tool2agent bindings for AI SDK in two forms:
 
-- `mkTool` (a.k.a. "tool builder") - a type-safe mini-framework for creating interactive LLM tools with rich feedback.
-- `tool2agent()` function as an enriched replacement for AI SDK `tool()` that gives more manual control to the user.
+- `mkTool()` (a.k.a. "tool builder") - a type-safe mini-framework for creating interactive LLM tools with rich feedback.
+- `tool2agent()` function is an enriched replacement for AI SDK `tool()` that gives more manual control to the developer than the agent builder. It does not implement any validation logic itself, only providing type-safe interface for that.
 
 ### Tool builder
 
-Tool builder implementation is the main value proposition of tool2agent so far.
+`mkTool()` is the main value proposition of tool2agent so far.
+
+It allows to semi-declaratively define tool feedback flows.
+
+- All tool arguments (input object fields) are made optional.
+- The LLM can fill them as it "sees" fit.
+- Validation runs for every argument separately. Once it succeeds, a field is marked as valid.
+- The developer can specify dependencies between arguments, which delays validation of tool input object fields until their dependencies are validated. This allows to establish ordering of parameter filling, which is very useful for user-facing chat applications.
+- During validation, the _values_ of validated fields are also accessible, making it possible to provide more narrow feedback.
+- Once all fields are valid, tool call is executed normally.
+
+[Check out a complete usage example](./test/airline.ts)
 
 ### `tool2agent()` function
 
@@ -49,12 +60,12 @@ export type Tool2Agent<InputType extends ToolInputType, OutputType> = Tool<
 - See [`ToolCallResult` definition](../types/src/tool2agent.ts)
 </details>
 
-`tool2agent()` function allows defining AI SDK LLM tools using an `execute()` method that handles both validation and execution, returning structured feedback via `ToolCallResult`.
+`tool2agent()` function allows defining AI SDK LLM tools using an `execute()` method that handles both validation and execution, returning structured feedback via [`ToolCallResult`](../types/src/tool2agent.ts).
 
 <details>
 <summary><strong>How to use tool2agent</strong></summary>
 
-- `execute()` accepts a partial (with all fields optional) tool payload, and returns a `ToolCallResult` that can either succeed (`ok: true`) with the output value, or fail (`ok: false`) with structured feedback info.
+- `execute()` accepts a partial (with all fields optional) tool payload, and returns a [`ToolCallResult`](../types/src/tool2agent.ts) that can either succeed (`ok: true`) with the output value, or fail (`ok: false`) with structured feedback info.
 
 ```typescript
 // Parameters of tool2agent() function:
